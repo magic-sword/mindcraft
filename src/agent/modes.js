@@ -1,8 +1,8 @@
 import * as skills from './library/skills.js';
 import * as world from './library/world.js';
 import * as mc from '../utils/mcdata.js';
-import settings from './settings.js'
 import convoManager from './conversation.js';
+import settings from './settings.js'
 
 async function say(agent, message) {
     agent.bot.modes.behavior_log += message + '\n';
@@ -124,8 +124,8 @@ const modes_list = [
                 this.stuck_time = 0;
                 execute(this, agent, async () => {
                     const crashTimeout = setTimeout(() => { agent.cleanKill("Got stuck and couldn't get unstuck") }, 10000);
-                    await skills.moveAway(bot, 5);
-                    clearTimeout(crashTimeout);
+                    try { await skills.moveAway(bot, 5); }
+                    finally { clearTimeout(crashTimeout); }
                     say(agent, 'I\'m free.');
                 });
             }
@@ -330,6 +330,8 @@ async function execute(mode, agent, func, timeout=-1) {
 }
 
 let _agent = null;
+const initialModeState = modes_list.map(mode => Object.fromEntries(
+    Object.entries(mode).filter(([, value]) => typeof value !== 'function')));
 const modes_map = {};
 for (let mode of modes_list) {
     modes_map[mode.name] = mode;
@@ -434,6 +436,10 @@ class ModeController {
 
 export function initModes(agent) {
     _agent = agent;
+    // One bot per process; reconnect starts fresh instead of inheriting active/paused modes.
+    modes_list.forEach((mode, i) => Object.assign(mode, structuredClone(initialModeState[i]), {
+        active: false, paused: false, last_time: Date.now()
+    }));
     // the mode controller is added to the bot object so it is accessible from anywhere the bot is used
     agent.bot.modes = new ModeController();
     if (agent.task) {

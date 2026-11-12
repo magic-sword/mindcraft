@@ -109,7 +109,7 @@ export async function craftRecipe(bot, itemName, num=1) {
 
     //Equip any armor the bot may have crafted.
     //There is probablly a more efficient method than checking the entire inventory but this is all mineflayer-armor-manager provides. :P
-    bot.armorManager.equipAll(); 
+    await bot.armorManager.equipAll();
 
     return true;
 }
@@ -454,6 +454,9 @@ export async function collectBlock(bot, blockType, num=1, exclude=null) {
             if (!blocktypes.includes(block.name)) {
                 return false;
             }
+            // Mineflayer first calls matching with palette entries without positions.
+            // Only filter by type there; safety/exclusions require an actual world block.
+            if (!block.position) return true;
             if (exclude) {
                 for (let position of exclude) {
                     if (block.position.x === position.x && block.position.y === position.y && block.position.z === position.z) {
@@ -1165,7 +1168,7 @@ function startDoorInterval(bot) {
                      block.name.includes('fence_gate') ||
                      block.name.includes('trapdoor'))) 
                 {
-                    bot.activateBlock(block);
+                    bot.activateBlock(block).catch(() => {});
                     break;
                 }
             }
